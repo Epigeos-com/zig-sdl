@@ -21,12 +21,12 @@ pub fn build(b: *std.Build) void {
     const exe: *std.Build.Step.Compile =
         if (target.result.abi.isAndroid())
             b.addSharedLibrary(.{
-                .name = "REO",
+                .name = "{{{APP_NAME}}}",
                 .root_module = exe_mod,
             })
         else
             b.addExecutable(.{
-                .name = "Reo",
+                .name = "{{{App_name}}}",
                 .root_module = exe_mod,
             });
 
