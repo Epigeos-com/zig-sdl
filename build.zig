@@ -1,9 +1,9 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const os_tag: ?std.Target.Os.Tag = .linux;
-    const cpu_arch: ?std.Target.Cpu.Arch = .x86_64;
-    const abi: ?std.Target.Abi = .gnu;
+    const os_tag: std.Target.Os.Tag = .linux;
+    const cpu_arch: std.Target.Cpu.Arch = .x86_64;
+    const abi: std.Target.Abi = .gnu;
     const android_api_level: ?u32 = 21;
 
     const target = b.standardTargetOptions(.{ .default_target = .{ .os_tag = os_tag, .cpu_arch = cpu_arch, .abi = abi, .android_api_level = android_api_level } });
