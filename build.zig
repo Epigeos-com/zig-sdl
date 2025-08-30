@@ -12,8 +12,8 @@ pub fn build(b: *std.Build) void {
     const os_string = if (abi.isAndroid()) @tagName(abi) else @tagName(os_tag);
     const cpu_arch_string = @tagName(cpu_arch);
     const app_name = @tagName(@import("build.zig.zon").name);
-    var app_name_upper: [app_name.len]u8 = undefined;
-    _ = comptime std.ascii.upperString(&app_name_upper, app_name);
+    var buf: [app_name.len]u8 = undefined;
+    const app_name_upper = std.ascii.upperString(&buf, app_name);
 
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
