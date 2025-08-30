@@ -1,12 +1,12 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const os_tag: std.Target.Os.Tag = .linux;
-    const abi: std.Target.Abi = .gnu;
-    const cpu_arch: std.Target.Cpu.Arch = .x86_64;
-    // const target = b.standardTargetOptions(.{ .default_target = .{ .abi = .android, .android_api_level = 21, .cpu_arch = .aarch64 } });
+    const os_tag: ?std.Target.Os.Tag = .linux;
+    const cpu_arch: ?std.Target.Cpu.Arch = .x86_64;
+    const abi: ?std.Target.Abi = .gnu;
+    const android_api_level: ?u32 = 21;
 
-    const target = b.standardTargetOptions(.{ .default_target = .{ .os_tag = os_tag, .cpu_arch = cpu_arch, .abi = abi } });
+    const target = b.standardTargetOptions(.{ .default_target = .{ .os_tag = os_tag, .cpu_arch = cpu_arch, .abi = abi, .android_api_level = android_api_level } });
     const optimize = b.standardOptimizeOption(.{});
 
     const os_string = if (abi.isAndroid()) @tagName(abi) else @tagName(os_tag);
