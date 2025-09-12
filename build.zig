@@ -105,7 +105,7 @@ pub fn build(b: *std.Build) !void {
     for (targets.items) |target| {
         // Exe
         const exe_mod = b.createModule(.{
-            .root_source_file = b.path("src/main_android.zig"),
+            .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
         });
