@@ -3,7 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) !void {
     const standard_target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    var targets = std.ArrayList(std.Build.ResolvedTarget).init(b.allocator);
+    var targets = std.array_list.Managed(std.Build.ResolvedTarget).init(b.allocator);
     defer targets.deinit();
 
     // Target options
@@ -97,7 +97,7 @@ pub fn build(b: *std.Build) !void {
     b.build_root.handle.makeDir("zig-out") catch |err| if (err == std.fs.Dir.MakeError.PathAlreadyExists) undefined else return err;
     var lib_dir = try b.build_root.handle.openDir("lib", .{ .iterate = true });
     var lib_dir_iterator = lib_dir.iterateAssumeFirstIteration();
-    var libs = std.ArrayList([]const u8).init(b.allocator);
+    var libs = std.array_list.Managed([]const u8).init(b.allocator);
     defer libs.deinit();
     while (try lib_dir_iterator.next()) |entry| if (entry.kind == .directory) try libs.append(entry.name);
     lib_dir.close();
@@ -111,7 +111,8 @@ pub fn build(b: *std.Build) !void {
         });
         const exe: *std.Build.Step.Compile =
             if (target.result.abi.isAndroid())
-                b.addSharedLibrary(.{
+                b.addLibrary(.{
+                    .linkage = .dynamic,
                     .name = app_name_upper,
                     .root_module = exe_mod,
                 })
