@@ -3,8 +3,11 @@ const std = @import("std");
 pub fn build(b: *std.Build) !void {
     const standard_target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    var targets = std.ArrayList(std.Build.ResolvedTarget).init(b.allocator);
+    var targets = std.array_list.Managed(std.Build.ResolvedTarget).init(b.allocator);
     defer targets.deinit();
+
+    const io = b.graph.io;
+    const build_dir = b.root.root_dir.handle;
 
     // Target options
     const TargetOptions = enum { all, pc, mobile, linux, windows, macos, android, ios };
@@ -14,7 +17,7 @@ pub fn build(b: *std.Build) !void {
     const android_api_level_option = b.option(u32, "tgtsaapi", "Android API for multi-target build (default: 21)") orelse 21;
     const allow_debug_multitarget_build_option = b.option(bool, "tgtsallowdebug", "Allow tgts to run on debug optimisation mode");
     if (target_set_option) |target_set_option_| {
-        if (optimize == .Debug and !(allow_debug_multitarget_build_option orelse false)) std.debug.panic("Attempted multi-target build on Debug optimiser, use -Dtgtsallowdebug to allow this", .{});
+        if (optimize == .debug and !(allow_debug_multitarget_build_option orelse false)) std.debug.panic("Attempted multi-target build on Debug optimiser, use -Dtgtsallowdebug to allow this", .{});
         const cpu_range = @intFromEnum(cpu_arch_range_option);
         if (target_set_option_ == .linux or target_set_option_ == .pc or target_set_option_ == .all) {
             try targets.appendSlice(&.{
@@ -93,14 +96,21 @@ pub fn build(b: *std.Build) !void {
     const app_name_upper = try std.ascii.allocUpperString(b.allocator, app_name);
     defer b.allocator.free(app_name_upper);
 
-    // Files
-    b.build_root.handle.makeDir("zig-out") catch |err| if (err == std.fs.Dir.MakeError.PathAlreadyExists) undefined else return err;
-    var lib_dir = try b.build_root.handle.openDir("lib", .{ .iterate = true });
+    // List libs
+    var lib_dir = try build_dir.openDir(io, "lib", .{ .iterate = true });
     var lib_dir_iterator = lib_dir.iterateAssumeFirstIteration();
-    var libs = std.ArrayList([]const u8).init(b.allocator);
+    var libs = std.array_list.Managed([]const u8).init(b.allocator);
     defer libs.deinit();
-    while (try lib_dir_iterator.next()) |entry| if (entry.kind == .directory) try libs.append(entry.name);
-    lib_dir.close();
+    while (try lib_dir_iterator.next(io)) |entry| if (entry.kind == .directory) try libs.append(entry.name);
+    lib_dir.close(io);
+
+    // List includes
+    var includue_dir = try build_dir.openDir(io, "include", .{ .iterate = true });
+    var include_dir_iterator = includue_dir.iterateAssumeFirstIteration();
+    var includes = std.array_list.Managed([]const u8).init(b.allocator);
+    defer includes.deinit();
+    while (try include_dir_iterator.next(io)) |entry| if (entry.kind == .directory or entry.kind == .sym_link) try includes.append(entry.name);
+    includue_dir.close(io);
 
     for (targets.items) |target| {
         // Exe
@@ -108,12 +118,14 @@ pub fn build(b: *std.Build) !void {
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         });
         const exe: *std.Build.Step.Compile =
             if (target.result.abi.isAndroid())
-                b.addSharedLibrary(.{
+                b.addLibrary(.{
                     .name = app_name_upper,
                     .root_module = exe_mod,
+                    .linkage = .dynamic,
                 })
             else
                 b.addExecutable(.{
@@ -127,15 +139,15 @@ pub fn build(b: *std.Build) !void {
         // Files
         const os_string = try std.fmt.allocPrint(b.allocator, "{s}-{s}-{s}", .{ @tagName(target.result.cpu.arch), @tagName(target.result.os.tag), @tagName(target.result.abi) });
         // defer b.allocator.free(os_string); // The build uses this and freeing this causes a corrupted output
-        const target_dir_path = try std.fmt.allocPrint(b.allocator, "zig-out/{s}", .{os_string});
+        const target_dir_path = try std.mem.join(b.allocator, "", &.{ "zig-out/", os_string });
         defer b.allocator.free(target_dir_path);
-        b.build_root.handle.makeDir(target_dir_path) catch |err| if (err == std.fs.Dir.MakeError.PathAlreadyExists) undefined else return err;
-        var target_dir = try b.build_root.handle.openDir(target_dir_path, .{});
-        defer target_dir.close();
+        const target_dir = try build_dir.createDirPathOpen(io, target_dir_path, .{});
+        defer target_dir.close(io);
 
         // LibC // TODO: Linux-specific
         if (target.result.abi.isAndroid()) {
             const android_os_string = try std.mem.replaceOwned(u8, b.allocator, os_string, "x86-", "i686-");
+            defer b.allocator.free(android_os_string);
             const libc_conf_content = try std.fmt.allocPrint(b.allocator,
                 \\include_dir=/usr/include/
                 \\sys_include_dir=/usr/include
@@ -149,10 +161,8 @@ pub fn build(b: *std.Build) !void {
             exe.libc_file = libc_conf;
 
             const libcpp_shared_path = try std.fmt.allocPrint(b.allocator, "/opt/android-sdk/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/{s}/libc++_shared.so", .{android_os_string});
-            try target_dir.symLink(libcpp_shared_path, "libc++_shared.so", .{});
-            b.allocator.free(android_os_string);
+            try target_dir.symLink(io, libcpp_shared_path, "libc++_shared.so", .{});
         }
-        exe.linkLibC();
 
         // Libs
         const needs_separate_libs = target.result.os.tag == .windows or target.result.abi.isAndroid();
@@ -160,17 +170,28 @@ pub fn build(b: *std.Build) !void {
         const lib_extension = if (target.result.os.tag == .windows) "dll" else "so";
         for (libs.items) |lib| {
             const lib_src_file_path = try std.fmt.allocPrint(b.allocator, "lib/{s}/{s}.{s}", .{ lib, os_string, lib_extension });
+            // defer b.allocator.free(lib_src_file_path); // The build uses this and freeing this causes a corrupted output
             const lib_dest_file_name = try std.fmt.allocPrint(b.allocator, "{s}{s}.{s}", .{ lib_prefix, lib, lib_extension });
-            if (needs_separate_libs) b.build_root.handle.copyFile(lib_src_file_path, target_dir, lib_dest_file_name, .{}) catch |err| std.debug.panic("{}, lib_src_file_path: {s}\n", .{ err, lib_src_file_path }) else _ = write_files.addCopyFile(b.path(lib_src_file_path), lib_dest_file_name);
-            // b.allocator.free(lib_src_file_path); // The build uses this and freeing this causes a corrupted output
-            b.allocator.free(lib_dest_file_name);
-            exe.linkSystemLibrary(lib);
+            defer b.allocator.free(lib_dest_file_name);
+            if (needs_separate_libs) build_dir.copyFile(lib_src_file_path, target_dir, lib_dest_file_name, io, .{}) catch |err| std.debug.panic("{}, lib_src_file_path: {s}\n", .{ err, lib_src_file_path });
+            const lib_dest_path = try std.mem.join(b.allocator, "/", &.{ target_dir_path, lib_dest_file_name });
+            defer b.allocator.free(lib_dest_path);
+
+            exe.root_module.addObjectFile(if (needs_separate_libs) b.path(lib_dest_path) else b.path(lib_src_file_path));
+        }
+
+        // Includes
+        for (includes.items) |include| {
+            const include_src_file_path = try std.fmt.allocPrint(b.allocator, "include/{s}/{s}.h", .{ include, include });
+            defer b.allocator.free(include_src_file_path);
+
+            const translate_c = b.addTranslateC(.{ .optimize = optimize, .target = target, .root_source_file = b.path(include_src_file_path) });
+            const module = translate_c.createModule();
+            exe.root_module.addImport(include, module);
         }
 
         // Links
-        if (target.result.os.tag == .windows) exe.subsystem = .Windows;
-        exe.addIncludePath(b.path("include/"));
-        exe.addLibraryPath(if (needs_separate_libs) b.path(target_dir_path) else write_files.getDirectory());
+        if (target.result.os.tag == .windows) exe.subsystem = .windows;
         const artifact = b.addInstallArtifact(exe, .{ .dest_dir = .{ .override = .{ .custom = os_string } } });
         b.getInstallStep().dependOn(&artifact.step);
     }
@@ -178,7 +199,6 @@ pub fn build(b: *std.Build) !void {
     if (run_step_exe) |run_step_exe_| {
         const run_cmd = b.addRunArtifact(run_step_exe_);
         run_cmd.step.dependOn(b.getInstallStep());
-        if (b.args) |args| run_cmd.addArgs(args);
         const run_step = b.step("run", "Run the app, requires your current setup as one of the targets");
         run_step.dependOn(&run_cmd.step);
     }

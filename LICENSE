@@ -1,21 +1,14 @@
-MIT License
+Copyright (c) 2026 Epigeos-com
+EpiLicense         No AI (incl: derrivatives)     Terminating
 
-Copyright (c) 2025 Epigeos
+1. Definitions
+    - Content refers to the code, software, documentation, artworks, and all other copyrightable material this license is shipped with.
+    - AI refers to any form of Artificial Intelligence, including all technologies which are created by humans or other human creations which are meant to simulate language or thinking. It particularly applies to large language models, neural networks, and machine learning algorithms.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+2. Rights
+    Permission is hereby granted, to any person obtaining a copy of this license to copy, modify, merge, publish, distribute, and otherwise use the associated Content under the limitations outlined in this license.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+    - No AI: The licensed Content cannot be used, modified, read, or trained on by AI, nor can any part of it be used in works using, in any part written by, or otherwise related to AI. All AI-related usage is forbidden. The sole exceptions to this are human language translation and text-to-speech.
+    - Termination: This license automatically terminates if you fail to comply with its terms and conditions. Upon termination, you must cease all use, distribution, and possession of the Content covered by this license.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+THE CONTENT IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
