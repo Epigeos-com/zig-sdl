@@ -1,5 +1,5 @@
 # About
-Only works on x86_64 linux host (for now)  
+The Android NDK paths are made for a x86_64 linux host, change them if you're on a different platform  
 It takes the output file name from build.zig.zon  
 **init.sh** is an example script for integration of this repo into other projects  
 **android.sh** moves files from zig-out into the proper android project spots, assuming the android project is in the dir ./android/

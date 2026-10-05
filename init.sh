@@ -3,5 +3,5 @@ rm zig-sdl/LICENSE
 rm zig-sdl/README.md
 rm zig-sdl/init.sh
 
-cp -r zig-sdl/* . 
-sudo rm -r zig-sdl
+cp -nr zig-sdl/* . 
+rm -fr zig-sdl

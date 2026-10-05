@@ -3,8 +3,8 @@ const std = @import("std");
 pub fn build(b: *std.Build) !void {
     const standard_target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    var targets = std.array_list.Managed(std.Build.ResolvedTarget).init(b.allocator);
-    defer targets.deinit();
+    var targets = std.ArrayList(std.Build.ResolvedTarget).empty;
+    defer targets.deinit(b.allocator);
 
     const io = b.graph.io;
     const build_dir = b.root.root_dir.handle;
@@ -20,15 +20,15 @@ pub fn build(b: *std.Build) !void {
         if (optimize == .debug and !(allow_debug_multitarget_build_option orelse false)) std.debug.panic("Attempted multi-target build on Debug optimiser, use -Dtgtsallowdebug to allow this", .{});
         const cpu_range = @intFromEnum(cpu_arch_range_option);
         if (target_set_option_ == .linux or target_set_option_ == .pc or target_set_option_ == .all) {
-            try targets.appendSlice(&.{
+            try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .gnu, .cpu_arch = .x86_64 }),
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .gnu, .cpu_arch = .x86 }),
             });
-            if (cpu_range < 2) try targets.appendSlice(&.{
+            if (cpu_range < 2) try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .gnu, .cpu_arch = .aarch64 }), // No SDL files available
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .gnu, .cpu_arch = .arm }), // No SDL files available
             });
-            if (cpu_range < 1) try targets.appendSlice(&.{
+            if (cpu_range < 1) try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .gnu, .cpu_arch = .mips64 }), // No SDL files available
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .gnu, .cpu_arch = .mips64el }), // No SDL files available
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .gnu, .cpu_arch = .mips }), // No SDL files available
@@ -43,51 +43,51 @@ pub fn build(b: *std.Build) !void {
             });
         }
         if (target_set_option_ == .windows or target_set_option_ == .pc or target_set_option_ == .all) {
-            try targets.appendSlice(&.{
+            try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .windows, .cpu_arch = .x86_64 }),
                 b.resolveTargetQuery(.{ .os_tag = .windows, .cpu_arch = .x86 }),
             });
-            if (cpu_range < 2) try targets.appendSlice(&.{
+            if (cpu_range < 2) try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .windows, .cpu_arch = .aarch64 }), // No SDL files available
                 b.resolveTargetQuery(.{ .os_tag = .windows, .cpu_arch = .arm }), // No SDL files available
             });
         }
         if (target_set_option_ == .macos or target_set_option_ == .pc or target_set_option_ == .all) {
-            try targets.appendSlice(&.{
+            try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .macos, .cpu_arch = .aarch64 }), // No SDL files available //.abi = .none
                 b.resolveTargetQuery(.{ .os_tag = .macos, .cpu_arch = .x86_64 }), // No SDL files available
             });
-            if (cpu_range < 2) try targets.appendSlice(&.{
+            if (cpu_range < 2) try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .macos, .cpu_arch = .x86 }), // No SDL files available
                 b.resolveTargetQuery(.{ .os_tag = .macos, .cpu_arch = .arm }), // No SDL files available
             });
-            if (cpu_range < 1) try targets.appendSlice(&.{
+            if (cpu_range < 1) try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .macos, .cpu_arch = .powerpc64 }), // No SDL files available
                 b.resolveTargetQuery(.{ .os_tag = .macos, .cpu_arch = .powerpc }), // No SDL files available
             });
         }
         if (target_set_option_ == .android or target_set_option_ == .mobile or target_set_option_ == .all) {
-            try targets.appendSlice(&.{
+            try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .android, .cpu_arch = .aarch64, .android_api_level = android_api_level_option }),
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .androideabi, .cpu_arch = .arm, .android_api_level = android_api_level_option }),
             });
-            if (cpu_range < 2) try targets.appendSlice(&.{
+            if (cpu_range < 2) try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .android, .cpu_arch = .x86_64, .android_api_level = android_api_level_option }),
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .android, .cpu_arch = .x86, .android_api_level = android_api_level_option }),
             });
-            if (cpu_range < 1) try targets.appendSlice(&.{
+            if (cpu_range < 1) try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .linux, .abi = .android, .cpu_arch = .riscv64, .android_api_level = 35 }),
             });
             if (cpu_range < 1 and android_api_level_option < 35) std.debug.print("Changed android api version for riscv64 to 35, as it does not support older versions\n", .{});
         }
         if (target_set_option_ == .ios or target_set_option_ == .mobile or target_set_option_ == .all) {
-            try targets.appendSlice(&.{
+            try targets.appendSlice(b.allocator, &.{
                 b.resolveTargetQuery(.{ .os_tag = .ios, .cpu_arch = .aarch64 }), // No SDL files available //.abi = .none
                 b.resolveTargetQuery(.{ .os_tag = .ios, .cpu_arch = .arm }), // No SDL files available
             });
         }
     } else {
-        try targets.append(standard_target);
+        try targets.append(b.allocator, standard_target);
     }
     var run_step_exe: ?*std.Build.Step.Compile = null;
 
@@ -95,22 +95,6 @@ pub fn build(b: *std.Build) !void {
     const app_name = @tagName(@import("build.zig.zon").name);
     const app_name_upper = try std.ascii.allocUpperString(b.allocator, app_name);
     defer b.allocator.free(app_name_upper);
-
-    // List libs
-    var lib_dir = try build_dir.openDir(io, "lib", .{ .iterate = true });
-    var lib_dir_iterator = lib_dir.iterateAssumeFirstIteration();
-    var libs = std.array_list.Managed([]const u8).init(b.allocator);
-    defer libs.deinit();
-    while (try lib_dir_iterator.next(io)) |entry| if (entry.kind == .directory) try libs.append(entry.name);
-    lib_dir.close(io);
-
-    // List includes
-    var includue_dir = try build_dir.openDir(io, "include", .{ .iterate = true });
-    var include_dir_iterator = includue_dir.iterateAssumeFirstIteration();
-    var includes = std.array_list.Managed([]const u8).init(b.allocator);
-    defer includes.deinit();
-    while (try include_dir_iterator.next(io)) |entry| if (entry.kind == .directory or entry.kind == .sym_link) try includes.append(entry.name);
-    includue_dir.close(io);
 
     for (targets.items) |target| {
         // Exe
@@ -136,7 +120,7 @@ pub fn build(b: *std.Build) !void {
         exe.step.dependOn(&write_files.step);
         if (target.result.cpu.arch == standard_target.result.cpu.arch and target.result.os.tag == standard_target.result.os.tag and target.result.abi == standard_target.result.abi) run_step_exe = exe;
 
-        // Files
+        // Target
         const os_string = try std.fmt.allocPrint(b.allocator, "{s}-{s}-{s}", .{ @tagName(target.result.cpu.arch), @tagName(target.result.os.tag), @tagName(target.result.abi) });
         // defer b.allocator.free(os_string); // The build uses this and freeing this causes a corrupted output
         const target_dir_path = try std.mem.join(b.allocator, "", &.{ "zig-out/", os_string });
@@ -144,7 +128,37 @@ pub fn build(b: *std.Build) !void {
         const target_dir = try build_dir.createDirPathOpen(io, target_dir_path, .{});
         defer target_dir.close(io);
 
-        // LibC // TODO: Linux-specific
+        // LibC
+        const needs_separate_libs = target.result.os.tag == .windows or target.result.abi.isAndroid();
+        const lib_prefix = if (target.result.os.tag == .windows) "" else "lib";
+        const lib_extension = if (target.result.os.tag == .windows) "dll" else "so";
+
+        const translate_c = b.addTranslateC(.{ .optimize = optimize, .target = target, .root_source_file = b.path("c_includes.h") });
+        const c_includes_read = try build_dir.readFileAlloc(io, "c_includes.h", b.allocator, .unlimited);
+        defer b.allocator.free(c_includes_read);
+        var c_includes_lines = std.mem.splitScalar(u8, c_includes_read, '\n');
+        while (c_includes_lines.next()) |line| {
+            if (std.mem.startsWith(u8, line, "#include ")) {
+                const brace_index = std.mem.findScalar(u8, line, '<') orelse 9;
+                const slash_index = std.mem.findScalar(u8, line, '/') orelse 9;
+                const lib_name = line[brace_index + 1 .. slash_index];
+
+                // translate_c.linkSystemLibrary(lib_name, .{});
+
+                const lib_src_file_path = try std.fmt.allocPrint(b.allocator, "lib/{s}/{s}.{s}", .{ lib_name, os_string, lib_extension });
+                // defer b.allocator.free(lib_src_file_path); // The build uses this and freeing this causes a corrupted output
+                const lib_dest_file_name = try std.fmt.allocPrint(b.allocator, "{s}{s}.{s}", .{ lib_prefix, lib_name, lib_extension });
+                defer b.allocator.free(lib_dest_file_name);
+                if (needs_separate_libs) build_dir.copyFile(lib_src_file_path, target_dir, lib_dest_file_name, io, .{}) catch |err| std.debug.panic("{}, lib_src_file_path: {s}\n", .{ err, lib_src_file_path });
+                const lib_dest_path = try std.mem.join(b.allocator, "/", &.{ target_dir_path, lib_dest_file_name });
+                defer b.allocator.free(lib_dest_path);
+
+                exe.root_module.addObjectFile(if (needs_separate_libs) b.path(lib_dest_path) else b.path(lib_src_file_path));
+            }
+        }
+        exe.root_module.addImport("c", translate_c.createModule());
+
+        // Android // TODO: Linux-specific
         if (target.result.abi.isAndroid()) {
             const android_os_string = try std.mem.replaceOwned(u8, b.allocator, os_string, "x86-", "i686-");
             defer b.allocator.free(android_os_string);
@@ -162,32 +176,6 @@ pub fn build(b: *std.Build) !void {
 
             const libcpp_shared_path = try std.fmt.allocPrint(b.allocator, "/opt/android-sdk/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/{s}/libc++_shared.so", .{android_os_string});
             try target_dir.symLink(io, libcpp_shared_path, "libc++_shared.so", .{});
-        }
-
-        // Libs
-        const needs_separate_libs = target.result.os.tag == .windows or target.result.abi.isAndroid();
-        const lib_prefix = if (target.result.os.tag == .windows) "" else "lib";
-        const lib_extension = if (target.result.os.tag == .windows) "dll" else "so";
-        for (libs.items) |lib| {
-            const lib_src_file_path = try std.fmt.allocPrint(b.allocator, "lib/{s}/{s}.{s}", .{ lib, os_string, lib_extension });
-            // defer b.allocator.free(lib_src_file_path); // The build uses this and freeing this causes a corrupted output
-            const lib_dest_file_name = try std.fmt.allocPrint(b.allocator, "{s}{s}.{s}", .{ lib_prefix, lib, lib_extension });
-            defer b.allocator.free(lib_dest_file_name);
-            if (needs_separate_libs) build_dir.copyFile(lib_src_file_path, target_dir, lib_dest_file_name, io, .{}) catch |err| std.debug.panic("{}, lib_src_file_path: {s}\n", .{ err, lib_src_file_path });
-            const lib_dest_path = try std.mem.join(b.allocator, "/", &.{ target_dir_path, lib_dest_file_name });
-            defer b.allocator.free(lib_dest_path);
-
-            exe.root_module.addObjectFile(if (needs_separate_libs) b.path(lib_dest_path) else b.path(lib_src_file_path));
-        }
-
-        // Includes
-        for (includes.items) |include| {
-            const include_src_file_path = try std.fmt.allocPrint(b.allocator, "include/{s}/{s}.h", .{ include, include });
-            defer b.allocator.free(include_src_file_path);
-
-            const translate_c = b.addTranslateC(.{ .optimize = optimize, .target = target, .root_source_file = b.path(include_src_file_path) });
-            const module = translate_c.createModule();
-            exe.root_module.addImport(include, module);
         }
 
         // Links
